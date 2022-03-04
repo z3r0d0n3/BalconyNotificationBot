@@ -28,6 +28,7 @@ client.on('ready', () => {
 
 contract.on("DeedMinted", (DeedId, DeedOwner) => {
     let message = "Deed #" + DeedId.toString() + " minted by " + DeedOwner + "!"
+    console.log(message)
     client.channels.cache.get(process.env.CHAT_ID).send(message);
     // T.post('statuses/update', { status: message }, function(err, data, response) {
     //     console.log(data)
