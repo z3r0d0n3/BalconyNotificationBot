@@ -13,11 +13,11 @@ const Twit = require('twit');
 //     strictSSL:            true,     // optional - requires SSL certificates to be valid.
 //   })
 
-let provider = new ethers.providers.InfuraProvider("rinkeby", process.env.INFURA);  // homestead -> mainnet
-provider = ethers.providers.InfuraProvider.getWebSocketProvider("rinkeby", process.env.INFURA); // homestead -> mainnet
+let provider = new ethers.providers.InfuraProvider("homestead", process.env.INFURA);  // homestead -> mainnet
+provider = ethers.providers.InfuraProvider.getWebSocketProvider("homestead", process.env.INFURA); // homestead -> mainnet
 
 let abi = ["event DeedMinted(uint DeedId, address DeedOwner, uint DeedLevel)"]
-let contract = new ethers.Contract(process.env.DEED, abi, provider) // 0x2baa69ce1b565276afccc85cc30c9b7a6f00f4d2 mainnet
+let contract = new ethers.Contract(process.env.DEED, abi, provider) // 0x2Baa69Ce1b565276AfcCc85CC30C9B7a6F00F4D2 mainnet
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 
@@ -26,9 +26,9 @@ client.on('ready', () => {
 	console.log(`Logged in as ${client.user.tag}!`);
 });
 
-contract.on("DeedMinted", (DeedId, DeedOwner, DeedLevel) => {
+contract.on("DeedMinted", (DeedId, DeedOwner) => {
     let message = "Deed #" + DeedId.toString() + " minted by " + DeedOwner + "!"
-    client.channels.cache.get('949086510420987904').send(message);
+    client.channels.cache.get(process.env.CHAT_ID).send(message);
     // T.post('statuses/update', { status: message }, function(err, data, response) {
     //     console.log(data)
     // })
