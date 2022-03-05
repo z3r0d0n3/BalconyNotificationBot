@@ -45,9 +45,9 @@ let abi2 = [{
 let contract = new ethers.Contract(process.env.DEED, abi2, provider) // 0x2Baa69Ce1b565276AfcCc85CC30C9B7a6F00F4D2 mainnet
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 
-client.on('ready', () => {
-	console.log(`Logged in as ${client.user.tag}!`);
-});
+// client.on('ready', () => {
+// 	console.log(`Logged in as ${client.user.tag}!`);
+// });
 
 contract.on("DeedMinted", (DeedId, DeedOwner, DeedLevel) => {
     let message = "Deed #" + DeedId.toString() + " minted by " + DeedOwner + "!"
