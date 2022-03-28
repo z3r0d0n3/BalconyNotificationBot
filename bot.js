@@ -221,16 +221,13 @@ const EXPECTED_PONG_BACK = 15000
 const KEEP_ALIVE_CHECK_INTERVAL = 7500
 
 const startConnection = async () => {
-  // let provider = new ethers.providers.InfuraProvider("homestead", process.env.INFURA);  // homestead -> mainnet
-  // let wsprovider = ethers.providers.InfuraProvider.getWebSocketProvider("homestead", process.env.INFURA); // homestead -> mainnet
-  let provider = new ethers.providers.JsonRpcProvider("http://localhost:8545")
-  let wsprovider = new ethers.providers.WebSocketProvider("http://localhost:8545")
+  let provider = new ethers.providers.InfuraProvider("homestead", process.env.INFURA);  // homestead -> mainnet
+  let wsprovider = ethers.providers.InfuraProvider.getWebSocketProvider("homestead", process.env.INFURA); // homestead -> mainnet
+  // let provider = new ethers.providers.JsonRpcProvider("http://localhost:8545")
+  // let wsprovider = new ethers.providers.WebSocketProvider("http://localhost:8545")
   let contract = new ethers.Contract(process.env.NEW_DEED, newAbi, provider);
   let wscontract = new ethers.Contract(process.env.NEW_DEED, newAbi, wsprovider);
   
-  // provider.resetEventsBlock(14355774)
-  // wsprovider.resetEventsBlock(14355774)
-
   let pingTimeout = null
   let keepAliveInterval = null
 
@@ -240,7 +237,7 @@ const startConnection = async () => {
   const events = await contract.queryFilter({
     address: process.env.NEW_DEED,
     topics: filter1.topics.concat(filter2.topics)
-  }, 14379229, "latest")
+  }, "latest") // 14379229, "latest") // TODO: switch later to LATEST only
 
   const logs = await provider.getLogs({
     fromBlock: 14379229,
@@ -249,19 +246,51 @@ const startConnection = async () => {
     topic: filter1.topics.concat(filter2.topics)
   })
 
-  for (let log of logs) {
-    ev = contract.interface.parseLog(log)
+  // TODO: remove after posting all missed logs
+  // for (let log of logs) {
+  //   ev = contract.interface.parseLog(log)
+  //   if (ev) {
+  //     if (ev.name === "Transfer") {
+  //       await new Promise(r => setTimeout(r, 2500));
+  //       if (ev.args.from === ethers.constants.AddressZero) {
+  //         let msg = "\nDeed #" + ev.args.tokenId.toString() + " minted by " + ev.args.to + "!"
+  //         console.log(msg)
+  //         client.channels.cache.get(process.env.CHAT_ID.toString()).send(msg);
+  //       }
+  //     }
+
+  //     if (ev.name === "NewDeed") {
+  //       if (ev.args.Referer === ethers.constants.AddressZero) {
+  //         if (ev.args.DeedPoints.gt(1)) {
+  //           let msg = "Owner: " + ev.args.DeedOwner + " (+2pts)"
+  //           console.log(msg)
+  //           client.channels.cache.get(process.env.CHAT_ID.toString()).send(msg);
+  //         } else {
+  //           let msg = "Owner: " + ev.args.DeedOwner + " (+1pt)"
+  //           console.log(msg)
+  //           client.channels.cache.get(process.env.CHAT_ID.toString()).send(msg);
+  //         }
+  //       } else {
+  //         let msg = "Owner: " + ev.args.DeedOwner + " : Referred by " + ev.args.Referer + " (+2pts, +3pts)"
+  //         console.log(msg)
+  //         client.channels.cache.get(process.env.CHAT_ID.toString()).send(msg);
+  //       }
+  //     }
+  //   }
+  //   await new Promise(r => setTimeout(r, 500));
+  // }
+
+  wscontract.on(events, (ev) => {
     if (ev) {
-      if (ev.name === "Transfer") {
-        await new Promise(r => setTimeout(r, 2500));
+      if (ev.event === "Transfer") {
         if (ev.args.from === ethers.constants.AddressZero) {
-          let msg = "\nDeed #" + ev.args.tokenId.toString() + " minted by " + ev.args.to + "!"
+          let msg = "Deed #" + ev.args.tokenId.toString() + " minted by " + ev.args.to + "!"
           console.log(msg)
           client.channels.cache.get(process.env.CHAT_ID.toString()).send(msg);
         }
       }
 
-      if (ev.name === "NewDeed") {
+      if (ev.event === "NewDeed") {
         if (ev.args.Referer === ethers.constants.AddressZero) {
           if (ev.args.DeedPoints.gt(1)) {
             let msg = "Owner: " + ev.args.DeedOwner + " (+2pts)"
@@ -279,58 +308,27 @@ const startConnection = async () => {
         }
       }
     }
-    await new Promise(r => setTimeout(r, 500));
-  }
+  })
 
-    wscontract.on(events, (ev) => {
-      if (ev) {
-        if (ev.event === "Transfer") {
-          if (ev.args.from === ethers.constants.AddressZero) {
-            let msg = "Deed #" + ev.args.tokenId.toString() + " minted by " + ev.args.to + "!"
-            console.log(msg)
-            // client.channels.cache.get(process.env.CHAT_ID.toString()).send(msg);
-          }
-        }
+  keepAliveInterval = setInterval(() => {
+    console.log('Checking if the connection is alive, sending a ping')
+    wsprovider._websocket.ping()
+    pingTimeout = setTimeout(() => {
+      wsprovider._websocket.terminate()
+    }, EXPECTED_PONG_BACK)
+  }, KEEP_ALIVE_CHECK_INTERVAL)    
 
-        if (ev.event === "NewDeed") {
-          if (ev.args.Referer === ethers.constants.AddressZero) {
-            if (ev.args.DeedPoints.gt(1)) {
-              let msg = "Owner: " + ev.args.DeedOwner + " (+2pts)"
-              console.log(msg)
-              // client.channels.cache.get(process.env.CHAT_ID.toString()).send(msg);
-            } else {
-              let msg = "Owner: " + ev.args.DeedOwner + " (+1pt)"
-              console.log(msg)
-              // client.channels.cache.get(process.env.CHAT_ID.toString()).send(msg);
-            }
-          } else {
-            let msg = "Owner: " + ev.args.DeedOwner + " : Referred by " + ev.args.Referer + " (+2pts, +3pts)"
-            console.log(msg)
-            // client.channels.cache.get(process.env.CHAT_ID.toString()).send(msg);
-          }
-        }
-      }
-    })
+  wsprovider._websocket.on('close', () => {
+      console.log('The websocket connection was closed')
+      clearInterval(keepAliveInterval)
+      clearTimeout(pingTimeout)
+      startConnection()
+  })
 
-    keepAliveInterval = setInterval(() => {
-      console.log('Checking if the connection is alive, sending a ping')
-      wsprovider._websocket.ping()
-      pingTimeout = setTimeout(() => {
-        wsprovider._websocket.terminate()
-      }, EXPECTED_PONG_BACK)
-    }, KEEP_ALIVE_CHECK_INTERVAL)    
-
-    wsprovider._websocket.on('close', () => {
-        console.log('The websocket connection was closed')
-        clearInterval(keepAliveInterval)
-        clearTimeout(pingTimeout)
-        startConnection()
-    })
-
-    wsprovider._websocket.on('pong', () => {
-        console.log('Received pong, so connection is alive, clearing the timeout')
-        clearInterval(pingTimeout)
-    })
+  wsprovider._websocket.on('pong', () => {
+      console.log('Received pong, so connection is alive, clearing the timeout')
+      clearInterval(pingTimeout)
+  })
 }
 
 startConnection()
