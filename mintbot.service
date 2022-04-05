@@ -1,0 +1,14 @@
+[Unit]
+Description=Node worker for mint notification bot as Service
+After=network.target
+
+[Service]
+User=c43k
+Group=www-data
+WorkingDirectory=/home/c43k/Balcony/BalconyNotificationBot
+Environment=PATH=/home/c43k/.local/bin:/home/c43k/.nvm/versions/node/v16.14.0/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/snap/bin
+Environment=NODE_ENV=production
+ExecStart=bash /home/c43k/Balcony/BalconyNotificationBot/start.sh
+
+[Install]
+WantedBy=multi-user.target
