@@ -284,7 +284,7 @@ const startConnection = async () => {
     if (ev) {
       if (ev.event === "Transfer") {
         if (ev.args.from === ethers.constants.AddressZero) {
-          let msg = "Deed #" + ev.args.tokenId.toString() + " minted by " + ev.args.to + "!"
+          let msg = "@everyone Deed #" + ev.args.tokenId.toString() + " minted by " + ev.args.to + "!"
           console.log(msg)
           client.channels.cache.get(process.env.CHAT_ID.toString()).send(msg);
         }
